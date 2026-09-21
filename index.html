@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منبه الأدوية الذكي</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --surface-color: #ffffff;
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --text-main: #1f2937;
+            --text-secondary: #4b5563;
+            --accent-due: #fee2e2;
+            --accent-due-border: #f87171;
+            --accent-safe: #ecfdf5;
+            --accent-safe-border: #34d399;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            max-width: 480px;
+            margin: auto;
+            box-sizing: border-box;
+            /* منع النسخ والتحديد بالكامل */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .card {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            margin-bottom: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+
+        .mini-clock {
+            background: #1e1b4b;
+            color: #e0e7ff;
+            text-align: center;
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
+        h2, h3 {
+            color: var(--text-main);
+            margin-top: 0;
+            font-size: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            box-sizing: border-box;
+            font-size: 15px;
+            color: var(--text-main);
+            /* إزالة أي إطار مزعج عند الضغط */
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+            background-color: #fff;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        /* تصميم القائمة المخصصة */
+        .custom-select-wrapper {
+            position: relative;
+            margin-top: 6px;
+            user-select: none;
+        }
+
+        .custom-select {
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 15px;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .custom-select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .custom-options {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            left: 0;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            display: none;
+            z-index: 99;
+        }
+
+        .custom-options.open {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 14px 16px;
+            font-size: 15px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .custom-option:last-child {
+            border-bottom: none;
+        }
+
+        .custom-option:hover {
+            background-color: #eef2ff;
+            color: var(--primary-color);
+        }
+
+        .custom-option.selected {
+            background-color: #e0e7ff;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 16px;
+            border-radius: 12px;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: background-color 0.2s, transform 0.1s;
+            /* إزالة إطار التركيز والتحديد من الأزرار */
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .reminder-item {
+            background: var(--accent-safe);
+            padding: 14px;
+            border-radius: 14px;
+            margin-top: 12px;
+            border-right: 6px solid var(--accent-safe-border);
+            transition: all 0.3s ease;
+        }
+
+        .reminder-item.due {
+            background: var(--accent-due);
+            border-right-color: var(--accent-due-border);
+        }
+
+        .reminder-info {
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .reminder-info b {
+            font-size: 17px;
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .actions-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            flex: 1;
+            margin-top: 0;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-taken { background-color: var(--success-color); }
+        .btn-delete { background-color: var(--danger-color); }
+
+        #customTimeContainer {
+            display: none;
+            background: #f8fafc;
+            border: 1px dashed var(--primary-color);
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .sync-status {
+            font-size: 11px;
+            text-align: center;
+            color: #9ca3af;
+            margin-top: 8px;
+        }
+
+        /* تصميم نافذة التنبيه المخصصة */
+        #customModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .custom-modal-box {
+            background: #ffffff;
+            width: 85%;
+            max-width: 340px;
+            padding: 24px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            animation: modalAppear 0.25s ease-out;
+        }
+
+        @keyframes modalAppear {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .custom-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .custom-modal-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .custom-modal-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .custom-modal-btn:hover {
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="liveClock" class="mini-clock">00:00:00</div>
+        <h2>منبه الأدوية</h2>
+        
+        <label for="medName">اسم الدواء:</label>
+        <input type="text" id="medName" placeholder="مثال: باراسيتامول">
+
+        <label for="intervalHours">كل كم ساعة؟</label>
+        <input type="number" id="intervalHours" min="1" max="72" placeholder="مثال: 8">
+
+        <label>حالة البداية:</label>
+        <div class="custom-select-wrapper" id="customSelectWrapper">
+            <div class="custom-select" id="customSelectTrigger">
+                <span id="selectedOptionText">أخذت العلاج الآن</span>
+                <span style="font-size: 12px; color: #6b7280;">▼</span>
+            </div>
+            <div class="custom-options" id="customOptions">
+                <div class="custom-option selected" data-value="now">✓ أخذت العلاج الآن</div>
+                <div class="custom-option" data-value="later">⏱ ابدأ العد التنازلي الآن</div>
+                <div class="custom-option" data-value="custom">تحديد وقت الجرعة السابقة يدويّاً</div>
+            </div>
+        </div>
+        <input type="hidden" id="startChoice" value="now">
+
+        <div id="customTimeContainer">
+            <label for="customTimeInput" style="margin-top: 0; color: var(--primary-color);">اختر الساعة السابقة:</label>
+            <input type="time" id="customTimeInput">
+        </div>
+
+        <button onclick="addReminder()">إضافة وتفعيل المنبه</button>
+        <div id="syncStatus" class="sync-status">جاري التحقق من الاتصال...</div>
+    </div>
+
+    <div class="card">
+        <h3>الأدوية النشطة والمواعيد:</h3>
+        <div id="remindersList">جاري تحميل الأدوية...</div>
+    </div>
+
+    <!-- نافذة منبثقة مخصصة -->
+    <div id="customModalOverlay">
+        <div class="custom-modal-box">
+            <div class="custom-modal-title" id="modalTitle">تنبيه</div>
+            <div class="custom-modal-text" id="modalMessage">النص هنا</div>
+            <button class="custom-modal-btn" onclick="closeCustomModal()">حسناً</button>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxOOywOgOpn6S9JMJgV0zbNany50lqQkMetSSGrPAHOfTqgDhxsL5ti1gB-jbRxJKr_Q/exec";
+        let reminders = [];
+
+        function showAppAlert(title, message) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('customModalOverlay').style.display = 'flex';
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customModalOverlay').style.display = 'none';
+        }
+
+        const selectTrigger = document.getElementById('customSelectTrigger');
+        const customOptions = document.getElementById('customOptions');
+        const hiddenInput = document.getElementById('startChoice');
+        const selectedOptionText = document.getElementById('selectedOptionText');
+
+        selectTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            customOptions.classList.toggle('open');
+        });
+
+        document.querySelectorAll('.custom-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                hiddenInput.value = option.getAttribute('data-value');
+                selectedOptionText.innerText = option.innerText.replace(/^[✓⏱🕒]\s*/, '');
+                customOptions.classList.remove('open');
+                
+                toggleCustomTime();
+            });
+        });
+
+        window.addEventListener('click', () => {
+            customOptions.classList.remove('open');
+        });
+
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('liveClock').innerText = 
+                `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        }, 1000);
+
+        function toggleCustomTime() {
+            const choice = hiddenInput.value;
+            document.getElementById('customTimeContainer').style.display = (choice === 'custom') ? 'block' : 'none';
+        }
+
+        function loadData() {
+            const localData = localStorage.getItem('med_reminders');
+            if (localData) {
+                reminders = JSON.parse(localData);
+                renderReminders();
+            }
+            
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL + "?action=get")
+                    .then(res => res.json())
+                    .then(data => {
+                        if (Array.isArray(data)) {
+                            reminders = data;
+                            localStorage.setItem('med_reminders', JSON.stringify(reminders));
+                            renderReminders();
+                            document.getElementById('syncStatus').innerText = "by:talibalazoo";
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('syncStatus').innerText = "وضع عدم الاتصال (يعمل محلياً بكفاءة)";
+                    });
+            } else {
+                document.getElementById('syncStatus').innerText = "لا يوجد إنترنت (يعمل عبر التخزين المحلي 📱)";
+            }
+        }
+
+        function saveDataLocallyAndRemotely(actionType, queryParams) {
+            localStorage.setItem('med_reminders', JSON.stringify(reminders));
+            renderReminders();
+
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL + "?" + queryParams)
+                    .then(res => res.json())
+                    .catch(err => console.log("المزامنة السحابية مؤجلة لحين الاتصال بالإنترنت"));
+            }
+        }
+
+        function addReminder() {
+            const name = document.getElementById('medName').value.trim();
+            const hours = parseFloat(document.getElementById('intervalHours').value);
+            const choice = hiddenInput.value;
+
+            if (!name || isNaN(hours) || hours <= 0) {
+                showAppAlert("تنبيه هام", "الرجاء إدخال اسم الدواء وعدد ساعات صحيح!");
+                return;
+            }
+
+            const now = new Date();
+            let nextTime;
+
+            if (choice === 'now') {
+                nextTime = now.getTime() + (hours * 60 * 60 * 1000);
+            } else if (choice === 'later') {
+                nextTime = now.getTime() + (hours * 60 * 60 * 1000);
+            } else if (choice === 'custom') {
+                const timeVal = document.getElementById('customTimeInput').value;
+                if (!timeVal) { 
+                    showAppAlert("تنبيه", "حدد وقت الجرعة السابقة!"); 
+                    return; 
+                }
+                const [targetH, targetM] = timeVal.split(':').map(Number);
+                let pastDate = new Date();
+                pastDate.setHours(targetH, targetM, 0, 0);
+                if (pastDate.getTime() > now.getTime()) pastDate.setDate(pastDate.getDate() - 1);
+                nextTime = pastDate.getTime() + (hours * 60 * 60 * 1000);
+                while (nextTime <= now.getTime()) nextTime += (hours * 60 * 60 * 1000);
+            }
+
+            const newMed = {
+                id: '_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                intervalHours: hours,
+                nextDueTime: nextTime,
+                status: "active"
+            };
+
+            reminders.push(newMed);
+            
+            const params = `action=add&id=${newMed.id}&name=${encodeURIComponent(newMed.name)}&intervalHours=${newMed.intervalHours}&nextDueTime=${newMed.nextDueTime}&status=active`;
+            saveDataLocallyAndRemotely('add', params);
+            
+            document.getElementById('medName').value = '';
+            document.getElementById('intervalHours').value = '';
+        }
+
+        function markAsTaken(id) {
+            const med = reminders.find(r => r.id === id);
+            if (med) {
+                med.nextDueTime = Date.now() + (med.intervalHours * 60 * 60 * 1000);
+                med._notified = false;
+                const params = `action=update&id=${id}&nextDueTime=${med.nextDueTime}&status=active`;
+                saveDataLocallyAndRemotely('update', params);
+            }
+        }
+
+        function deleteReminder(id) {
+            reminders = reminders.filter(r => r.id !== id);
+            const params = `action=delete&id=${id}`;
+            saveDataLocallyAndRemotely('delete', params);
+        }
+
+        function renderReminders() {
+            const listDiv = document.getElementById('remindersList');
+            if (!reminders || reminders.length === 0) {
+                listDiv.innerHTML = "<div style='text-align:center; color:#6b7280; padding:10px;'>لا توجد أدوية مضافة حالياً</div>";
+                return;
+            }
+
+            let html = '';
+            const now = Date.now();
+
+            reminders.forEach(r => {
+                const dueTime = Number(r.nextDueTime);
+                const isDue = now >= dueTime;
+                let timeStr = "";
+
+                if (isDue) {
+                    const overdueMs = now - dueTime;
+                    const totalSecs = Math.floor(overdueMs / 1000);
+                    const h = Math.floor(totalSecs / 3600);
+                    const m = Math.floor((totalSecs % 3600) / 60);
+                    const s = totalSecs % 60;
+                    
+                    let passedText = "";
+                    if (h > 0) passedText += `${h} ساعة `;
+                    if (m > 0 || h > 0) passedText += `${m} دقيقة `;
+                    passedText += `${s} ثانية`;
+
+                    timeStr = `<span style="color: var(--danger-color); font-weight: bold;">حان وقت الجرعة! 💊</span><br>` +
+                              `<span style="font-size: 12px; color: #b91c1c;">لقد مر ${passedText} على وقت استحقاق العلاج</span>`;
+                } else {
+                    const diff = dueTime - now;
+                    const totalSecs = Math.floor(diff / 1000);
+                    const h = Math.floor(totalSecs / 3600);
+                    const m = Math.floor((totalSecs % 3600) / 60);
+                    const s = totalSecs % 60;
+                    
+                    timeStr = `<span style="color: var(--success-color); font-weight: bold;">متبقي للجرعة القادمة:</span><br>` +
+                              `<span style="font-size: 13px; color: var(--text-secondary);">${h} س و ${m} د و ${s} ث</span>`;
+                }
+                
+                html += `
+                    <div class="reminder-item ${isDue ? 'due' : ''}">
+                        <div class="reminder-info">
+                            <b>${r.name}</b>
+                            الفاصل الزمني: كل ${r.intervalHours} ساعات<br>
+                            <div style="margin-top: 6px;">${timeStr}</div>
+                        </div>
+                        <div class="actions-container">
+                            <button class="action-btn btn-taken" onclick="markAsTaken('${r.id}')">تم أخذ العلاج ✓</button>
+                            <button class="action-btn btn-delete" onclick="deleteReminder('${r.id}')">حذف</button>
+                        </div>
+                    </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+        }
+
+        setInterval(() => {
+            if (reminders.length > 0) {
+                const now = Date.now();
+                reminders.forEach(r => {
+                    if (now >= Number(r.nextDueTime) && !r._notified) {
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification("تنبيه أدوية 💊", { body: `حان وقت تناول علاجك: ${r.name}` });
+                        }
+                        r._notified = true;
+                    }
+                });
+                renderReminders();
+            }
+        }, 1000);
+
+        loadData();
+    </script>
+</body>
+</html>
