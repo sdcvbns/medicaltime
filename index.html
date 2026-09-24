@@ -374,6 +374,7 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxOOywOgOpn6S9JMJgV0zbNany50lqQkMetSSGrPAHOfTqgDhxsL5ti1gB-jbRxJKr_Q/exec";
         let reminders = [];
+        let isInitialRender = true; // لمنع إعادة بناء القائمة بالكامل بلا داعٍ
 
         function showAppAlert(title, message) {
             document.getElementById('modalTitle').innerText = title;
@@ -432,6 +433,7 @@
             const localData = localStorage.getItem('med_reminders');
             if (localData) {
                 reminders = JSON.parse(localData);
+                isInitialRender = true;
                 renderReminders();
             }
             
@@ -442,6 +444,7 @@
                         if (Array.isArray(data)) {
                             reminders = data;
                             localStorage.setItem('med_reminders', JSON.stringify(reminders));
+                            isInitialRender = true;
                             renderReminders();
                             document.getElementById('syncStatus').innerText = "by:talibalazoo";
                         }
@@ -456,6 +459,7 @@
 
         function saveDataLocallyAndRemotely(actionType, queryParams) {
             localStorage.setItem('med_reminders', JSON.stringify(reminders));
+            isInitialRender = true;
             renderReminders();
 
             if (navigator.onLine) {
@@ -519,7 +523,20 @@
                 med.nextDueTime = Date.now() + (med.intervalHours * 60 * 60 * 1000);
                 med._notified = false;
                 const params = `action=update&id=${id}&nextDueTime=${med.nextDueTime}&status=active`;
-                saveDataLocallyAndRemotely('update', params);
+                saveDataLocalllyAndRemotelySafe('update', params);
+            }
+        }
+
+        // دالة مساعدة لتحديث البيانات محلياً بدون إعادة بناء DOM كامل إذا لم تتطلب البنية ذلك
+        function saveDataLocallyAndRemotelySafe(actionType, queryParams) {
+            localStorage.setItem('med_reminders', JSON.stringify(reminders));
+            isInitialRender = true;
+            renderReminders();
+
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL + "?" + queryParams)
+                    .then(res => res.json())
+                    .catch(err => console.log("المزامنة السحابية مؤجلة لحين الاتصال بالإنترنت"));
             }
         }
 
@@ -533,18 +550,45 @@
             const listDiv = document.getElementById('remindersList');
             if (!reminders || reminders.length === 0) {
                 listDiv.innerHTML = "<div style='text-align:center; color:#6b7280; padding:10px;'>لا توجد أدوية مضافة حالياً</div>";
+                isInitialRender = true;
                 return;
             }
 
-            let html = '';
             const now = Date.now();
 
+            // إذا كانت هذه هي المرة الأولى أو تغير عدد العناصر، نقوم بإعادة بناء HTML بالكامل
+            if (isInitialRender || listDiv.children.length !== reminders.length) {
+                let html = '';
+                reminders.forEach(r => {
+                    html += `
+                        <div class="reminder-item" id="item-${r.id}">
+                            <div class="reminder-info">
+                                <b>${r.name}</b>
+                                الفاصل الزمني: كل ${r.intervalHours} ساعات<br>
+                                <div style="margin-top: 6px;" id="time-text-${r.id}">جاري الحساب...</div>
+                            </div>
+                            <div class="actions-container">
+                                <button class="action-btn btn-taken" onclick="markAsTaken('${r.id}')">تم أخذ العلاج ✓</button>
+                                <button class="action-btn btn-delete" onclick="deleteReminder('${r.id}')">حذف</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = html;
+                isInitialRender = false;
+            }
+
+            // تحديث النصوص والعدادات ديناميكياً لكل عنصر بدون إعادة بناء الواجهة لمنع التجمد والتوقف
             reminders.forEach(r => {
                 const dueTime = Number(r.nextDueTime);
                 const isDue = now >= dueTime;
-                let timeStr = "";
+                const itemEl = document.getElementById(`item-${r.id}`);
+                const timeTextEl = document.getElementById(`time-text-${r.id}`);
+
+                if (!itemEl || !timeTextEl) return;
 
                 if (isDue) {
+                    itemEl.className = "reminder-item due";
                     const overdueMs = now - dueTime;
                     const totalSecs = Math.floor(overdueMs / 1000);
                     const h = Math.floor(totalSecs / 3600);
@@ -556,36 +600,23 @@
                     if (m > 0 || h > 0) passedText += `${m} دقيقة `;
                     passedText += `${s} ثانية`;
 
-                    timeStr = `<span style="color: var(--danger-color); font-weight: bold;">حان وقت الجرعة! 💊</span><br>` +
-                              `<span style="font-size: 12px; color: #b91c1c;">لقد مر ${passedText} على وقت استحقاق العلاج</span>`;
+                    timeTextEl.innerHTML = `<span style="color: var(--danger-color); font-weight: bold;">حان وقت الجرعة! 💊</span><br>` +
+                                           `<span style="font-size: 12px; color: #b91c1c;">لقد مر ${passedText} على وقت استحقاق العلاج</span>`;
                 } else {
+                    itemEl.className = "reminder-item";
                     const diff = dueTime - now;
                     const totalSecs = Math.floor(diff / 1000);
                     const h = Math.floor(totalSecs / 3600);
                     const m = Math.floor((totalSecs % 3600) / 60);
                     const s = totalSecs % 60;
                     
-                    timeStr = `<span style="color: var(--success-color); font-weight: bold;">متبقي للجرعة القادمة:</span><br>` +
-                              `<span style="font-size: 13px; color: var(--text-secondary);">${h} س و ${m} د و ${s} ث</span>`;
+                    timeTextEl.innerHTML = `<span style="color: var(--success-color); font-weight: bold;">متبقي للجرعة القادمة:</span><br>` +
+                                           `<span style="font-size: 13px; color: var(--text-secondary);">${h} س و ${m} د و ${s} ث</span>`;
                 }
-                
-                html += `
-                    <div class="reminder-item ${isDue ? 'due' : ''}">
-                        <div class="reminder-info">
-                            <b>${r.name}</b>
-                            الفاصل الزمني: كل ${r.intervalHours} ساعات<br>
-                            <div style="margin-top: 6px;">${timeStr}</div>
-                        </div>
-                        <div class="actions-container">
-                            <button class="action-btn btn-taken" onclick="markAsTaken('${r.id}')">تم أخذ العلاج ✓</button>
-                            <button class="action-btn btn-delete" onclick="deleteReminder('${r.id}')">حذف</button>
-                        </div>
-                    </div>
-                `;
             });
-            listDiv.innerHTML = html;
         }
 
+        // حلقة العداد التنازلي والفحص المستمر
         setInterval(() => {
             if (reminders.length > 0) {
                 const now = Date.now();
@@ -597,7 +628,7 @@
                         r._notified = true;
                     }
                 });
-                renderReminders();
+                renderReminders(); // التحديث الآن يجري بسلاسة على العناصر مباشرة
             }
         }, 1000);
 
